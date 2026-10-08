@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Trae PasswordHasher (Microsoft.Extensions.Identity.Core) y la configuración. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RedVital.Identidad.Dominio\RedVital.Identidad.Dominio.csproj" />
+    <ProjectReference Include="..\RedVital.Identidad.Infraestructura\RedVital.Identidad.Infraestructura.csproj" />
+  </ItemGroup>
+</Project>
