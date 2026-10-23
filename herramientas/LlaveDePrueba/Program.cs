@@ -72,7 +72,7 @@ if (args[0] == "semilla-identidad")
     Console.WriteLine("BEGIN;");
     foreach (var c in cuentas)
     {
-        Console.WriteLine($"INSERT INTO usuario (id, correo, nombre, credencial_hash, rol_id) VALUES ('{c.Id}', '{c.Correo}', '{c.Nombre}', '{hasher.HashPassword(new object(), claveSemilla)}', '{c.Rol}') ON CONFLICT (correo) DO NOTHING;");
+        Console.WriteLine($"INSERT INTO usuario (id, correo, nombre, credencial_hash, rol_id) VALUES ('{c.Id}', '{c.Correo}', '{c.Nombre}', '{hasher.HashPassword(new object(), claveSemilla)}', '{c.Rol}') ON CONFLICT (correo) DO UPDATE SET credencial_hash = EXCLUDED.credencial_hash;");
         var jurisdiccionId = "c3" + c.Id[2..];
         Console.WriteLine(c.Ambito == "institucion"
             ? $"INSERT INTO usuario_jurisdiccion (id, usuario_id, ambito, institucion_id, asignada_por) VALUES ('{jurisdiccionId}', '{c.Id}', 'institucion', '{c.Institucion}', '{AdminNacional}') ON CONFLICT (id) DO NOTHING;"
