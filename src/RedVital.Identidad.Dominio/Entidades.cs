@@ -95,6 +95,28 @@ public class RegistroAuditoriaIdent
     public DateTimeOffset OcurridoEn { get; set; }
 }
 
+/// <summary>
+/// Bandeja de salida (DD 5.3.6): un evento que se guarda en la misma
+/// transacción que el cambio que lo origina y que el publicador lleva a Kafka.
+/// </summary>
+public class EventoSalida
+{
+    public Guid Id { get; set; }
+    public long Secuencia { get; set; }
+    public required string Tipo { get; set; }
+    public int VersionEsquema { get; set; }
+    public required string Tema { get; set; }
+    public required string Clave { get; set; }
+    public required string Carga { get; set; }
+    public string? ClaveNatural { get; set; }
+    public required string CorrelacionId { get; set; }
+    public string Estado { get; set; } = "pendiente";
+    public int IntentosPublicacion { get; set; }
+    public DateTimeOffset CreadoEn { get; set; }
+    public DateTimeOffset? PublicadoEn { get; set; }
+    public DateTimeOffset? ExpiraEn { get; set; }
+}
+
 /// <summary>Metadatos de una llave de firma publicada en el JWKS (T-304.4).</summary>
 public class LlaveFirma
 {

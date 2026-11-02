@@ -20,6 +20,7 @@ public class IdentidadDbContext : DbContext
     public DbSet<RegistroAuditoriaIdent> RegistroAuditoriaIdent => Set<RegistroAuditoriaIdent>();
     public DbSet<LlaveFirma> LlavesFirma => Set<LlaveFirma>();
     public DbSet<OperacionIdempotente> OperacionesIdempotentes => Set<OperacionIdempotente>();
+    public DbSet<EventoSalida> EventosSalida => Set<EventoSalida>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,6 +38,27 @@ public class IdentidadDbContext : DbContext
             e.Property(u => u.UltimoAccesoEn).HasColumnName("ultimo_acceso_en");
             e.Property(u => u.CreadoEn).HasColumnName("creado_en");
             e.Property(u => u.ActualizadoEn).HasColumnName("actualizado_en");
+        });
+
+        modelBuilder.Entity<EventoSalida>(e =>
+        {
+            e.ToTable("evento_salida");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            // La genera la base (identidad): fija el orden de publicación y nunca sale del servicio.
+            e.Property(x => x.Secuencia).HasColumnName("secuencia").ValueGeneratedOnAdd();
+            e.Property(x => x.Tipo).HasColumnName("tipo");
+            e.Property(x => x.VersionEsquema).HasColumnName("version_esquema");
+            e.Property(x => x.Tema).HasColumnName("tema");
+            e.Property(x => x.Clave).HasColumnName("clave");
+            e.Property(x => x.Carga).HasColumnName("carga").HasColumnType("jsonb");
+            e.Property(x => x.ClaveNatural).HasColumnName("clave_natural");
+            e.Property(x => x.CorrelacionId).HasColumnName("correlacion_id");
+            e.Property(x => x.Estado).HasColumnName("estado");
+            e.Property(x => x.IntentosPublicacion).HasColumnName("intentos_publicacion");
+            e.Property(x => x.CreadoEn).HasColumnName("creado_en");
+            e.Property(x => x.PublicadoEn).HasColumnName("publicado_en");
+            e.Property(x => x.ExpiraEn).HasColumnName("expira_en");
         });
 
         modelBuilder.Entity<Rol>(e =>
