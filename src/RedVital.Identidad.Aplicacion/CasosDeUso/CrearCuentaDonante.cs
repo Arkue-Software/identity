@@ -1,12 +1,12 @@
 // RedVital — identidad-service
-// Alta de la cuenta de un donante registrado (RF-01, DD 15.4: POST /v1/donantes
-// "crea la cuenta en Identidad y el perfil"). Solo la invoca el Servicio de
-// Donación con su token de servicio, por /internal/v1/cuentas-donante; el
-// gateway nunca enruta /internal.
+// Alta de la cuenta de un donante (RF-01). La pide la propia persona desde la
+// web por POST /v1/cuentas-donante, sin sesión; con la sesión que abre después
+// crea su perfil de donante en el Servicio de Donación. Ningún servicio llama a
+// otro para esto, y la credencial nunca sale de Identidad.
 //
-// Idempotente por (cliente, clave): el reintento de un registro cuyo perfil no
-// alcanzó a guardarse en Donación devuelve la misma cuenta. La huella no
-// incluye la credencial: nunca se guarda ni se resume en otro lugar que el hash.
+// Idempotente por (cliente, clave): reenviar el mismo formulario con la misma
+// Idempotency-Key devuelve la misma cuenta. La huella no incluye la credencial:
+// nunca se guarda ni se resume en otro lugar que el hash.
 
 using System.Security.Cryptography;
 using System.Text;
@@ -45,7 +45,7 @@ public partial class CrearCuentaDonante
         var correo = s.Correo?.Trim().ToLowerInvariant() ?? "";
         var nombre = s.Nombre?.Trim() ?? "";
         if (!CorreoValido().IsMatch(correo) || correo.Length > 160 || nombre.Length is 0 or > 120
-            || s.Credencial is null || s.Credencial.Length is < 10 or > 128
+            || !CredencialAceptable(s.Credencial)
             || string.IsNullOrWhiteSpace(clave) || clave.Length > 64)
             return new(ResultadoCuenta.DatosInvalidos);
 
@@ -98,9 +98,7 @@ public partial class CrearCuentaDonante
         await _auditoria.RegistrarAsync(new RegistroAuditoriaIdent
         {
             Id = Guid.NewGuid(),
-            ActorTipo = "sistema",
-            ActorId = cliente,
-            Rol = "servicio",
+            ActorTipo = "anonimo",
             Operacion = Operacion,
             RecursoTipo = "usuario",
             RecursoId = usuario.Id,
@@ -111,6 +109,10 @@ public partial class CrearCuentaDonante
 
         return new(ResultadoCuenta.Creada, usuario.Id);
     }
+
+    /// <summary>La misma regla que muestra la web: de 10 a 128 caracteres, con letras y números.</summary>
+    private static bool CredencialAceptable(string? credencial) =>
+        credencial is { Length: >= 10 and <= 128 } && credencial.Any(char.IsLetter) && credencial.Any(char.IsDigit);
 
     [GeneratedRegex(@"^[^\s@]+@[^\s@]+\.[^\s@]+$")]
     private static partial Regex CorreoValido();

@@ -1,11 +1,13 @@
 // RedVital — identidad-service
-// Conecta T-304.2, T-304.3, T-304.4, T-330.1, T-330.2, T-330.3 y T-330.4.
+// Conecta T-304.2, T-304.3, T-304.4, T-330.1, T-330.2, T-330.3, T-330.4 y RF-01.
 // T-303.2: en Development usa la llave de prueba; en cualquier otro ambiente
 // (QA, Production) esa clase ni siquiera se registra.
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using RedVital.Identidad.Api.Mantenimiento;
+using RedVital.Identidad.Api.Mensajeria;
 using RedVital.Identidad.Api.Soporte;
 using RedVital.Identidad.Aplicacion.CasosDeUso;
 using RedVital.Identidad.Dominio;
@@ -35,9 +37,22 @@ builder.Services.AddScoped<RenovarSesion>();          // T-330.1
 builder.Services.AddScoped<CerrarSesion>();           // T-330.2
 builder.Services.AddScoped<EmitirTokenServicio>();    // T-330.3
 builder.Services.AddScoped<IRegistradorAuditoria, RegistradorAuditoria>(); // T-330.4
-builder.Services.AddScoped<CrearCuentaDonante>();     // RF-01, alta desde Donación
+builder.Services.AddScoped<CrearCuentaDonante>();     // RF-01, POST /v1/cuentas-donante
 builder.Services.AddScoped<ConsultarUsuarioActual>(); // GET /v1/usuarios/me
 builder.Services.AddHealthChecks();
+builder.Services.AddHostedService<DepuradorRegistrosTecnicos>(); // bandeja publicada e idempotencia vencidas
+
+// Kafka: cada registro de auditoría sale por la bandeja de salida (EV-10) hacia
+// la bitácora del Servicio Institucional. Si el broker no responde, los
+// registros esperan en la base y el servicio sigue atendiendo.
+var kafka = builder.Configuration.GetSection("Kafka").Get<OpcionesKafka>() ?? new OpcionesKafka();
+kafka.Clave ??= builder.Configuration["kafka_identidad"];
+if (kafka.Habilitado)
+{
+    builder.Services.AddSingleton(kafka);
+    builder.Services.AddSingleton<ProductorKafka>();
+    builder.Services.AddHostedService<PublicadorBandeja>();
+}
 
 // T-303.2 / T-303.3: la llave de prueba solo existe para Development.
 if (builder.Environment.IsDevelopment())
@@ -76,7 +91,6 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 builder.Services.AddAuthorization(o =>
 {
     o.AddPolicy("SoloGateway", p => p.RequireClaim("role", "servicio").RequireClaim("sub", "gateway"));
-    o.AddPolicy("SoloDonacion", p => p.RequireClaim("role", "servicio").RequireClaim("sub", "donacion"));
 });
 
 // Contrato en snake_case: token_acceso, expira_en, correlacion_id…
