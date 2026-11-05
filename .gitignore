@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+*.user
+herramientas/LlaveDePrueba/llaves/
+secretos/
+*.private.pem
+appsettings.*.local.json

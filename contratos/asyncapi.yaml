@@ -1,0 +1,108 @@
+asyncapi: 3.0.0
+info:
+  title: RedVital — Eventos del Servicio de Identidad
+  version: 1.0.0
+  description: |
+    Contrato del único evento que publica Identidad. Identidad no consume
+    eventos ni recibe llamadas de otros servicios: cada servicio valida los
+    tokens con la llave pública de firma, montada como secreto.
+
+    Política de contenido (RT-16): la estructura común de auditoría. Nunca
+    correo, nombre ni credenciales.
+defaultContentType: application/json
+
+servers:
+  kafka:
+    host: kafka:9092
+    protocol: kafka
+    security:
+      - $ref: '#/components/securitySchemes/scram'
+
+channels:
+  auditoriaRegistrada:
+    address: redvital.identidad.audit-recorded.v1
+    title: EV-10 — Registro de auditoría (Identidad)
+    description: |
+      Cada registro de la serie de auditoría de Identidad sale en la misma
+      transacción que lo escribe. Consumidor: Institucional (grupo
+      institucional), que compone la bitácora del auditor (ST2, ADR-016).
+    messages:
+      auditoriaRegistrada:
+        $ref: '#/components/messages/AuditoriaRegistrada'
+    bindings:
+      kafka:
+        partitions: 3
+        replicas: 1
+        topicConfiguration:
+          cleanup.policy: [delete]
+          retention.ms: 604800000
+        bindingVersion: 0.5.0
+
+operations:
+  publicarAuditoriaRegistrada:
+    action: send
+    channel:
+      $ref: '#/channels/auditoriaRegistrada'
+    messages:
+      - $ref: '#/channels/auditoriaRegistrada/messages/auditoriaRegistrada'
+
+components:
+  securitySchemes:
+    scram:
+      type: scramSha512
+
+  messages:
+    AuditoriaRegistrada:
+      name: audit.recorded
+      title: Registro de auditoría
+      headers:
+        $ref: '#/components/schemas/Cabeceras'
+      payload:
+        $ref: '#/components/schemas/AuditoriaRegistradaV1'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: correlacion_id, para que los registros de una operación lleguen en orden
+          bindingVersion: 0.5.0
+
+  schemas:
+    Cabeceras:
+      type: object
+      required: [evento-id, evento-tipo, evento-version, correlacion-id, ocurrido-en, productor]
+      properties:
+        evento-id:
+          type: string
+          format: uuid
+        evento-tipo:
+          type: string
+        evento-version:
+          type: string
+        correlacion-id:
+          type: string
+          maxLength: 36
+        ocurrido-en:
+          type: string
+          format: date-time
+        productor:
+          type: string
+
+    AuditoriaRegistradaV1:
+      type: object
+      description: Estructura común de las cuatro series (DD, Sección 5). Sin el contenido del recurso.
+      additionalProperties: false
+      required: [id, actor_tipo, actor_id, rol, jurisdiccion_solicitada, operacion, recurso_tipo, recurso_id, resultado,
+                 correlacion_id, origen, ocurrido_en]
+      properties:
+        id: { type: string, format: uuid }
+        actor_tipo: { type: string, enum: [usuario, sistema, anonimo] }
+        actor_id: { type: [string, 'null'], maxLength: 64 }
+        rol: { type: [string, 'null'], maxLength: 40 }
+        jurisdiccion_solicitada: { type: [string, 'null'], maxLength: 80 }
+        operacion: { type: string, maxLength: 80 }
+        recurso_tipo: { type: string, maxLength: 40 }
+        recurso_id: { type: [string, 'null'], format: uuid }
+        resultado: { type: string, enum: [permitido, denegado] }
+        correlacion_id: { type: string, maxLength: 36 }
+        origen: { type: [string, 'null'], maxLength: 45 }
+        ocurrido_en: { type: string, format: date-time }

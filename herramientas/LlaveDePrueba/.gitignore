@@ -1,0 +1,4 @@
+# Cada integrante genera su propia llave de prueba con "dotnet run -- generar-llave".
+llaves/
+bin/
+obj/
