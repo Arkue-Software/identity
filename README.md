@@ -18,7 +18,8 @@ en [`contratos/asyncapi.yaml`](contratos/asyncapi.yaml).
 | `POST /v1/cuentas-donante` | RF-01: la persona crea su cuenta, sin sesión e idempotente con `Idempotency-Key`. Con ella crea después su perfil en Donación |
 | `GET /.well-known/jwks.json` | T-304.4 |
 | `POST /v1/sesiones/renovacion` | T-330.1 |
-| `DELETE /v1/sesiones/actual` | T-330.2 |
+| `DELETE /v1/sesiones/actual` | T-330.2. Solo cierra la sesión de quien presenta el token |
+| `GET /v1/usuarios/me` | DD 15.1: rol, nombre y ámbitos vigentes de la propia cuenta |
 | `POST /internal/v1/sesiones/servicio` | T-330.3 (solo el gateway) |
 | `POST /internal/v1/auditoria/denegaciones` | T-330.4 (solo gateway) |
 
@@ -35,15 +36,14 @@ dotnet run --project herramientas/LlaveDePrueba -- generar-llave
 ```
 
 La API ejecutada con `dotnet run` en el host no puede conectarse a la base
-aislada. Para ejecutar la API contra PostgreSQL se necesita un contenedor
-conectado a `redvital_identidad_data`, usando `Host=db-identidad;Port=5432`.
-Este repositorio aún no incluye Dockerfile ni composición de runtime para ese
-contenedor. La llave privada es secreta incluso en desarrollo: móntala como
-secreto al ejecutar Identidad y nunca la versionas ni compartas.
+aislada. Para ejecutarla contra PostgreSQL se usa la imagen de este repositorio
+(`Dockerfile`) dentro de la composición de `Arkue-Software/Despliegue_RedVital`
+(`vm-servicios/docker-compose.yml`), que la conecta a la base con TLS y le
+monta los secretos. La llave privada es secreta incluso en desarrollo: móntala
+como secreto al ejecutar Identidad y nunca la versiones ni la compartas.
 
-Mientras no exista esa composición, valida el código con las pruebas descritas
-abajo; el build y las pruebas no equivalen a un arranque funcional conectado a
-PostgreSQL.
+Para validar solo el código, usa las pruebas descritas abajo; el build y las
+pruebas no equivalen a un arranque funcional conectado a PostgreSQL.
 
 La aplicación no crea ni migra el esquema al iniciar. Si faltan la base, las
 migraciones o la llave configurada, el inicio falla explícitamente.
