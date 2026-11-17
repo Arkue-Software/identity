@@ -35,6 +35,24 @@ public static class Correlacion
         contexto.Items[Cabecera] as string ?? Guid.NewGuid().ToString();
 }
 
+public static class OrigenPeticion
+{
+    /// <summary>
+    /// Dirección de quien hizo la petición, para la auditoría. Identidad solo
+    /// es alcanzable desde el gateway, que reenvía en X-Forwarded-For la
+    /// dirección que vio el borde; sin esa cabecera (pruebas locales sin
+    /// gateway) se usa la de la conexión. La columna admite 45 caracteres.
+    /// </summary>
+    public static string? Origen(this HttpContext contexto)
+    {
+        var reenviado = contexto.Request.Headers["X-Forwarded-For"].ToString();
+        var valor = string.IsNullOrWhiteSpace(reenviado)
+            ? contexto.Connection.RemoteIpAddress?.ToString()
+            : reenviado.Split(',')[0].Trim();
+        return valor is { Length: > 45 } ? valor[..45] : valor;
+    }
+}
+
 public static class Problemas
 {
     public static IActionResult SesionInvalida(string correlacionId, string detalle) =>

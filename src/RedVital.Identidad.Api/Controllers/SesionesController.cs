@@ -42,7 +42,7 @@ public class SesionesController : ControllerBase
     {
         var correlacionId = HttpContext.CorrelacionId();
         var resultado = await _iniciarSesion.EjecutarAsync(
-            new IniciarSesionSolicitud(peticion.Correo, peticion.Credencial, HttpContext.Connection.RemoteIpAddress?.ToString()),
+            new IniciarSesionSolicitud(peticion.Correo, peticion.Credencial, HttpContext.Origen()),
             correlacionId, ct);
 
         // Mismo mensaje para "no existe" y "credencial incorrecta" (SRS V3, RF-23).
