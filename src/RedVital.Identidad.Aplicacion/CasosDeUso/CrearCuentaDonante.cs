@@ -45,6 +45,7 @@ public partial class CrearCuentaDonante
         var correo = s.Correo?.Trim().ToLowerInvariant() ?? "";
         var nombre = s.Nombre?.Trim() ?? "";
         if (!CorreoValido().IsMatch(correo) || correo.Length > 160 || nombre.Length is 0 or > 120
+            || !NombreValido().IsMatch(nombre)
             || !CredencialAceptable(s.Credencial)
             || string.IsNullOrWhiteSpace(clave) || clave.Length > 64)
             return new(ResultadoCuenta.DatosInvalidos);
@@ -116,4 +117,12 @@ public partial class CrearCuentaDonante
 
     [GeneratedRegex(@"^[^\s@]+@[^\s@]+\.[^\s@]+$")]
     private static partial Regex CorreoValido();
+
+    /// <summary>
+    /// Letras, espacios, apóstrofo, guion y punto de abreviatura. El nombre sale
+    /// en el saludo de los correos: sin esta regla podría llevar un enlace o un
+    /// texto ajeno. Donación y la web aplican la misma.
+    /// </summary>
+    [GeneratedRegex(@"^\p{L}(?:[\p{L}\p{M} '’-]|\.(?= |$))*$")]
+    private static partial Regex NombreValido();
 }

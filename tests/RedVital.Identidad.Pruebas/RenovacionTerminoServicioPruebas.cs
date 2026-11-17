@@ -72,6 +72,20 @@ public class RenovacionTerminoServicioPruebas
         Assert.False(await e.CerrarSesion().EjecutarAsync(sesionId, "corr-otra-vez")); // cerrar dos veces no falla
     }
 
+    [Fact] // T-330.2: la cookie identifica la sesión, pero solo su titular la cierra
+    public async Task Cerrar_la_sesion_de_otra_cuenta_no_la_revoca()
+    {
+        var (e, cookie) = await SesionIniciadaAsync();
+        var sesionId = Guid.Parse(cookie.Split('.')[0]);
+        var titularId = e.Contexto.Usuarios.Single().Id;
+
+        Assert.False(await e.CerrarSesion().EjecutarAsync(sesionId, Guid.NewGuid(), "corr-ajena"));
+        Assert.Null(e.Contexto.Sesiones.Single().RevocadaEn);
+
+        Assert.True(await e.CerrarSesion().EjecutarAsync(sesionId, titularId, "corr-propia"));
+        Assert.Equal("cierre", e.Contexto.Sesiones.Single().MotivoRevocacion);
+    }
+
     [Fact] // T-330.2: desactivar la cuenta revoca todas sus sesiones
     public async Task Desactivacion_revoca_todas_las_sesiones()
     {

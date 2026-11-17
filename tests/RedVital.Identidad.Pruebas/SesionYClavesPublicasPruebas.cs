@@ -59,6 +59,17 @@ public class SesionYClavesPublicasPruebas
         Assert.DoesNotContain(r.CookieRenovacion!.Split('.')[1], sesion.SecretoHash); // nunca se guarda en claro
     }
 
+    [Fact] // T-304.2: el alta guarda el correo en minúsculas; escrito con mayúsculas también entra
+    public async Task Correo_con_mayusculas_o_espacios_inicia_sesion()
+    {
+        var e = new Entorno();
+        e.CrearOperador();
+
+        var r = await e.IniciarSesion().EjecutarAsync(new(" Operador@Banco-Ficticio.test ", "Clave-Prueba-123", null), "corr-7");
+
+        Assert.True(r.Exitoso);
+    }
+
     [Theory] // T-304.2: mismo resultado para usuario inexistente y credencial incorrecta
     [InlineData("operador@banco-ficticio.test", "clave-equivocada")]
     [InlineData("nadie@banco-ficticio.test", "Clave-Prueba-123")]

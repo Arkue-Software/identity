@@ -81,8 +81,11 @@ public class SesionesController : ControllerBase
         if (Request.Cookies.TryGetValue(NombreCookie, out var cookie) && !string.IsNullOrEmpty(cookie))
         {
             var partes = cookie.Split('.', 2);
-            if (partes.Length == 2 && Guid.TryParse(partes[0], out var sesionId))
-                await _cerrarSesion.EjecutarAsync(sesionId, correlacionId, ct);
+            // Solo se cierra la sesión de quien presenta el token: la cookie
+            // identifica la sesión, pero no demuestra de quién es.
+            if (partes.Length == 2 && Guid.TryParse(partes[0], out var sesionId)
+                && Guid.TryParse(User.FindFirst("sub")?.Value, out var titularId))
+                await _cerrarSesion.EjecutarAsync(sesionId, titularId, correlacionId, ct);
         }
         BorrarCookie();
         return NoContent();

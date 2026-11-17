@@ -25,6 +25,12 @@ public record IniciarSesionResultado(
 
 public class IniciarSesion
 {
+    // Resumen de una credencial que nadie conoce. Cuando la cuenta no existe o
+    // está inactiva se verifica contra él, para que la respuesta tarde lo mismo
+    // que con una cuenta real y el tiempo no revele qué correos tienen cuenta.
+    private static readonly string ResumenSenuelo =
+        new PasswordHasher<Usuario>().HashPassword(null!, SecretoRenovacion.Generar());
+
     private readonly IdentidadDbContext _contexto;
     private readonly PasswordHasher<Usuario> _hasher = new();
     private readonly EmisorTokenAcceso _emisorToken;
@@ -38,9 +44,16 @@ public class IniciarSesion
     }
     public async Task<IniciarSesionResultado> EjecutarAsync(IniciarSesionSolicitud solicitud, string correlacionId, CancellationToken ct = default)
     {
-        var usuario = await _contexto.Usuarios
+        // El alta guarda el correo en minúsculas. Se busca tal como llega y en
+        // minúsculas, y se prefiere la coincidencia exacta.
+        var correo = solicitud.Correo?.Trim() ?? "";
+        var correoNormalizado = correo.ToLowerInvariant();
+        var credencial = solicitud.Credencial ?? "";
+        var candidatos = await _contexto.Usuarios
             .Include(u => u.Jurisdicciones)
-            .FirstOrDefaultAsync(u => u.Correo == solicitud.Correo, ct);
+            .Where(u => u.Correo == correo || u.Correo == correoNormalizado)
+            .ToListAsync(ct);
+        var usuario = candidatos.FirstOrDefault(u => u.Correo == correo) ?? candidatos.FirstOrDefault();
 
         // La respuesta ante credenciales incorrectas NUNCA indica cuál de los
         // dos datos falló (SRS V3, nota de RF-23/RF-24) — por eso el mismo
@@ -48,21 +61,22 @@ public class IniciarSesion
         // coincide". No separes estos dos casos en el controlador tampoco.
         if (usuario is null || !usuario.Activo)
         {
-            await RegistrarIntentoFallidoAsync(solicitud.Correo, correlacionId, solicitud.Origen, ct);
+            _hasher.VerifyHashedPassword(null!, ResumenSenuelo, credencial);
+            await RegistrarIntentoFallidoAsync(correlacionId, solicitud.Origen, ct);
             return new IniciarSesionResultado(Exitoso: false);
         }
 
-        var verificacion = _hasher.VerifyHashedPassword(usuario, usuario.CredencialHash, solicitud.Credencial);
+        var verificacion = _hasher.VerifyHashedPassword(usuario, usuario.CredencialHash, credencial);
         if (verificacion == PasswordVerificationResult.Failed)
         {
-            await RegistrarIntentoFallidoAsync(solicitud.Correo, correlacionId, solicitud.Origen, ct, usuario.Id.ToString());
+            await RegistrarIntentoFallidoAsync(correlacionId, solicitud.Origen, ct, usuario.Id.ToString());
             return new IniciarSesionResultado(Exitoso: false);
         }
 
         var ahora = DateTimeOffset.UtcNow;
 
         // --- Sesión de renovación (8 horas, con estado — RF-23) ---
-        var secretoRenovacion = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+        var secretoRenovacion = SecretoRenovacion.Generar();
         var sesion = new Sesion
         {
             Id = Guid.NewGuid(),
@@ -106,7 +120,7 @@ public class IniciarSesion
             CookieExpira: sesion.ExpiraEn);
     }
 
-    private async Task RegistrarIntentoFallidoAsync(string correo, string correlacionId, string? origen, CancellationToken ct, string? actorId = null)
+    private async Task RegistrarIntentoFallidoAsync(string correlacionId, string? origen, CancellationToken ct, string? actorId = null)
     {
         await _auditoria.RegistrarAsync(new RegistroAuditoriaIdent
         {

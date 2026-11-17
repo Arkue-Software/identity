@@ -81,7 +81,7 @@ public class RenovarSesion
         }
 
         // --- Rotar el secreto (en cada renovación, no solo al vencer) ---
-        var secretoNuevo = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+        var secretoNuevo = SecretoRenovacion.Generar();
         sesion.SecretoHash = _hasher.HashPassword(sesion.Usuario!, secretoNuevo);
         sesion.RenovadaEn = ahora;
         await _contexto.SaveChangesAsync(ct);

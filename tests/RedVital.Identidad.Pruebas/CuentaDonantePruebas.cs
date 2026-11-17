@@ -65,6 +65,9 @@ public class CuentaDonantePruebas
     [InlineData("a@b.co", "SoloLetrasSinNumeros", "Nombre")]
     [InlineData("a@b.co", "12345678901234", "Nombre")]
     [InlineData("a@b.co", "Clave-Larga-2026", " ")]
+    [InlineData("a@b.co", "Clave-Larga-2026", "Ana http://sitio.co")]
+    [InlineData("a@b.co", "Clave-Larga-2026", "Entra a sitio.co")]
+    [InlineData("a@b.co", "Clave-Larga-2026", "Ana 2026")]
     public async Task Datos_invalidos_no_crean_nada(string correo, string credencial, string nombre)
     {
         var e = new Entorno();
@@ -74,6 +77,19 @@ public class CuentaDonantePruebas
         Assert.Equal(ResultadoCuenta.DatosInvalidos, r.Resultado);
         Assert.Equal(0, await e.Contexto.Usuarios.CountAsync());
         Assert.Equal(0, await e.Contexto.EventosSalida.CountAsync());
+    }
+
+    [Theory]
+    [InlineData("María José Núñez")]
+    [InlineData("Ana-Lucía O'Brien")]
+    [InlineData("J. Pérez")]
+    public async Task Nombres_con_tildes_guiones_y_abreviaturas_se_aceptan(string nombre)
+    {
+        var e = new Entorno();
+
+        var r = await Caso(e).EjecutarAsync(new("nombre@correo.co", "Clave-Larga-2026", nombre), Cliente, "clave-7", "corr-i");
+
+        Assert.Equal(ResultadoCuenta.Creada, r.Resultado);
     }
 
     [Fact]
