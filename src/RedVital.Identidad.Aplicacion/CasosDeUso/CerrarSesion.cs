@@ -24,6 +24,16 @@ public class CerrarSesion
         _auditoria = auditoria;
     }
 
+    /// <summary>
+    /// Cierre pedido por una persona: solo cierra la sesión si es suya. El
+    /// identificador de sesión llega en la cookie; el titular, en el token.
+    /// </summary>
+    public async Task<bool> EjecutarAsync(Guid sesionId, Guid titularId, string correlacionId, CancellationToken ct = default)
+    {
+        var esSuya = await _contexto.Sesiones.AnyAsync(s => s.Id == sesionId && s.UsuarioId == titularId, ct);
+        return esSuya && await EjecutarAsync(sesionId, correlacionId, ct);
+    }
+
     /// <returns>
     /// true si cerró algo real. false si la sesión no existía o ya estaba
     /// cerrada — el controlador responde 204 en los dos casos por igual

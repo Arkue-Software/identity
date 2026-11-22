@@ -1,15 +1,12 @@
 name: CI - Identity service
 
-# Mismo patrón que ci-campaign-service.yml. Dos diferencias, a revisar con DevOps:
-#  1. También corre en PR hacia "development": con GitFlow las historias se
-#     fusionan ahí, no en main; si solo corre hacia main, una historia nunca
-#     pasa por la integración continua antes de fusionarse.
-#  2. Ejecuta "dotnet test": sin ese paso, T-304.5, T-330.5 y T-303.3 existen
-#     pero nadie las corre automáticamente.
+# Corre en los PR hacia develop y main: con GitFlow las historias se integran
+# en develop, y ahí es donde deben compilar y pasar las pruebas (T-304.5,
+# T-330.5 y T-303.3) antes de fusionarse.
 on:
   workflow_dispatch:
   pull_request:
-    branches: ["main", "development"]
+    branches: ["main", "develop"]
 
 jobs:
   compilar-dotnet:
