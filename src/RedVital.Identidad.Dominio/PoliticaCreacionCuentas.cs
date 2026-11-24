@@ -1,13 +1,9 @@
-// Identity service (.NET) — capa Dominio. Sin dependencias externas.
-// Regla: cada rol solo crea roles de nivel inferior. U7 (auditor) y U1/U2/U3 no crean cuentas.
 namespace RedVital.Identidad.Dominio;
 
 public enum RolCuenta { U1 = 1, U2, U3, U4, U5, U6, U7 }
 
-/// Quien hace la petición, tomado del JWT (nunca del cuerpo de la petición).
 public sealed record Solicitante(Guid CuentaId, RolCuenta Rol, string? RutaTerritorial, Guid? BancoId);
 
-/// Datos de la cuenta que se quiere crear.
 public sealed record NuevaCuenta(string Correo, string Nombre, RolCuenta Rol, string? RutaTerritorial, Guid? BancoId);
 
 public static class PoliticaCreacionCuentas
@@ -26,14 +22,25 @@ public static class PoliticaCreacionCuentas
     public static bool PuedeCrearRol(RolCuenta solicitante, RolCuenta objetivo) =>
         RolesCreables(solicitante).Contains(objetivo);
 
-    /// La cuenta nueva debe quedar dentro de la jurisdicción de quien la crea.
+    /// <summary>Convierte entradas como "05", "05.05001" o "05001" al formato DIVIPOLA "/00/05/05001".</summary>
+    public static string? NormalizarRuta(string? ruta)
+    {
+        if (string.IsNullOrWhiteSpace(ruta)) return null;
+        var limpia = ruta.Trim().TrimEnd('/');
+        if (limpia.StartsWith("/00", StringComparison.Ordinal)) return limpia;
+
+        var partes = limpia.TrimStart('/').Replace('.', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (partes.Length == 1 && partes[0].Length == 5)
+            return $"/00/{partes[0][..2]}/{partes[0]}";
+        return "/00/" + string.Join('/', partes);
+    }
+
     public static bool EnJurisdiccion(Solicitante s, NuevaCuenta n) => s.Rol switch
     {
-        RolCuenta.U6 => true, // país entero
-        RolCuenta.U5 => s.RutaTerritorial is not null
-                        && n.RutaTerritorial is not null
-                        && (n.RutaTerritorial == s.RutaTerritorial
-                            || n.RutaTerritorial.StartsWith(s.RutaTerritorial + ".", StringComparison.Ordinal)),
+        RolCuenta.U6 => true,
+        RolCuenta.U5 => NormalizarRuta(s.RutaTerritorial) is { } sr
+                        && NormalizarRuta(n.RutaTerritorial) is { } nr
+                        && (nr == sr || nr.StartsWith(sr + "/", StringComparison.Ordinal)),
         RolCuenta.U4 => s.BancoId is not null && n.BancoId == s.BancoId,
         _ => false,
     };

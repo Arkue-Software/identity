@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using RedVital.Identidad.Api.Mantenimiento;
 using RedVital.Identidad.Api.Mensajeria;
 using RedVital.Identidad.Api.Soporte;
+using RedVital.Identidad.Aplicacion;
 using RedVital.Identidad.Aplicacion.CasosDeUso;
 using RedVital.Identidad.Dominio;
 using RedVital.Identidad.Infraestructura.Auditoria;
@@ -37,7 +38,8 @@ builder.Services.AddScoped<RenovarSesion>();          // T-330.1
 builder.Services.AddScoped<CerrarSesion>();           // T-330.2
 builder.Services.AddScoped<EmitirTokenServicio>();    // T-330.3
 builder.Services.AddScoped<IRegistradorAuditoria, RegistradorAuditoria>(); // T-330.4
-builder.Services.AddScoped<CrearCuentaDonante>();     // RF-01, POST /v1/cuentas-donante
+builder.Services.AddScoped<CrearCuentaDonante>();
+builder.Services.AddScoped<CrearCuentaCasoDeUso>();     // RF-01, POST /v1/cuentas-donante
 builder.Services.AddScoped<ConsultarUsuarioActual>(); // GET /v1/usuarios/me
 builder.Services.AddHealthChecks();
 builder.Services.AddHostedService<DepuradorRegistrosTecnicos>(); // bandeja publicada e idempotencia vencidas
